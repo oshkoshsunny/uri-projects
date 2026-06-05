@@ -95,12 +95,23 @@ export default function App() {
 
   const handleFile = (file) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target.result.split(",")[1];
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      const base64 = canvas.toDataURL("image/jpeg", 0.7).split(",")[1];
+      URL.revokeObjectURL(url);
       analyzeImage(base64);
     };
-    reader.readAsDataURL(file);
+    img.src = url;
   };
 
   const saveBook = async () => {
