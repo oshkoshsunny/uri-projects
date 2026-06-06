@@ -65,14 +65,11 @@ export async function evaluateBookFromImage(base64Image, mimeType) {
   return JSON.parse(text)
 }
 
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyHflc5L394cxcZzj8ubjnitPqeqPC0oXpm7jEsB-79Rn_EpIB5UxkOtLnXa0IBdXkpOQ/exec'
-
 export async function syncToSheets(type, data) {
   try {
-    await fetch(SHEETS_URL, {
+    await fetch('/api/sheets', {
       method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, data }),
     })
   } catch {
