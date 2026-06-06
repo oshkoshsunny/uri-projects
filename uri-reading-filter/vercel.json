@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "api/analyze.js": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "routes": [
+    { "src": "/api/analyze", "dest": "/api/analyze.js" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
