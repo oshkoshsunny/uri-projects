@@ -71,10 +71,10 @@ export async function syncToSheets(type, data) {
     await fetch(SHEETS_URL, {
       method: 'POST',
       mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ type, data }),
     })
   } catch {
-    // no-cors means we can't read response; silently continue
+    // silent
   }
 }
