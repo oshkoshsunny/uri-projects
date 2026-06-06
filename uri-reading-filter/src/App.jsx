@@ -93,7 +93,7 @@ export default function App() {
       const parsed = JSON.parse(clean);
       setCurrentResult({ ...parsed, image: base64, date: new Date().toLocaleDateString("ko-KR") });
     } catch (e) {
-      setCurrentResult({ error: true });
+      setCurrentResult({ error: true, message: e.message });
     }
     setScanning(false);
   };
@@ -321,6 +321,11 @@ export default function App() {
           {currentResult?.error && (
             <div style={{ background: "#FF475715", border: "1px solid #FF475740", borderRadius: 16, padding: 24, textAlign: "center" }}>
               <div style={{ color: "#FF4757", marginBottom: 8 }}>판정 실패</div>
+              {currentResult.message && (
+                <div style={{ color: "#FF4757", fontSize: 11, marginBottom: 12, fontFamily: "monospace", wordBreak: "break-all" }}>
+                  {currentResult.message}
+                </div>
+              )}
               <button onClick={() => setCurrentResult(null)} style={{
                 background: "transparent", border: "1px solid #FF4757", color: "#FF4757",
                 padding: "8px 20px", borderRadius: 8, cursor: "pointer", fontSize: 13
