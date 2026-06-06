@@ -61,7 +61,8 @@ export async function evaluateBookFromImage(base64Image, mimeType) {
   }
 
   const data = await response.json()
-  const text = data.content[0].text
+  const raw = data.content[0].text
+  const text = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim()
   return JSON.parse(text)
 }
 
