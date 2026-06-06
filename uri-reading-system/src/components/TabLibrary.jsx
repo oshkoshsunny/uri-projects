@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { getBooks, updateBookStatus, calcScore } from '../lib/storage'
 
+function deleteBook(id) {
+  const books = JSON.parse(localStorage.getItem('uri_books_db') || '[]')
+  localStorage.setItem('uri_books_db', JSON.stringify(books.filter(b => b.id !== id)))
+}
+
 const STATUSES = ['전체', '후보', '선택됨', '읽음', '중단']
 
 const STATUS_BADGE = {
@@ -25,6 +30,13 @@ export default function TabLibrary() {
 
   function changeStatus(id, status) {
     updateBookStatus(id, status)
+    refresh()
+  }
+
+  function handleDelete(id) {
+    if (!window.confirm('이 책을 삭제할까요?')) return
+    deleteBook(id)
+    setExpanded(null)
     refresh()
   }
 
@@ -122,6 +134,12 @@ export default function TabLibrary() {
                     ))}
                   </div>
                 </div>
+                <button
+                  onClick={() => handleDelete(book.id)}
+                  style={{ marginTop: 12, width: '100%', padding: '8px', background: '#fed7d7', color: '#742a2a', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  🗑️ 삭제
+                </button>
               </div>
             )}
           </div>
