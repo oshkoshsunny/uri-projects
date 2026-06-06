@@ -49,7 +49,6 @@ export default function TabBookEval() {
       ...result,
       score: calcScore(result),
       status: '후보',
-      imagePreview,
     }
     saveBook(book)
     await syncToSheets('book', book)
