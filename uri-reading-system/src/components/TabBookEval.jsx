@@ -9,6 +9,7 @@ export default function TabBookEval() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
 
@@ -43,16 +44,20 @@ export default function TabBookEval() {
   }
 
   async function handleSave() {
-    if (!result) return
+    if (!result || saving || saved) return
+    setSaving(true)
+    const ageMap = { yes: '적합', caution: '주의', no: '부적합' }
     const book = {
       id: Date.now().toString(),
       ...result,
+      ageAppropriate: ageMap[result.ageAppropriate] || result.ageAppropriate,
       score: calcScore(result),
       status: '후보',
     }
     saveBook(book)
     await syncToSheets('book', book)
     setSaved(true)
+    setSaving(false)
   }
 
   const verdictClass = {
@@ -203,10 +208,10 @@ export default function TabBookEval() {
           <button
             className="btn-primary"
             style={{ marginTop: 12 }}
-            disabled={saved}
+            disabled={saved || saving}
             onClick={handleSave}
           >
-            {saved ? '✅ DB에 저장됨' : '💾 책 후보 DB에 저장'}
+            {saved ? '✅ DB에 저장됨' : saving ? <><span className="spinner" />저장 중...</> : '💾 책 후보 DB에 저장'}
           </button>
         </div>
       )}
