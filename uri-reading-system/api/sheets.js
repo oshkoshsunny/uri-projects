@@ -47,18 +47,18 @@ export default async function handler(req, res) {
 
     if (type === 'book') {
       const sheetName = 'Books'
-      await ensureHeader(sheets, sheetName, ['날짜','ID','제목','저자','장르','판정','점수','연령적합','태그','흥미요소','가치관','관심사연결','상태'])
+      await ensureHeader(sheets, sheetName, ['날짜','제목','저자','장르','판정','점수','연령적합','태그','흥미요소','가치관','관심사연결','상태','ID'])
       await sheets.spreadsheets.values.append({
         spreadsheetId: SHEET_ID,
         range: `${sheetName}!A1`,
         valueInputOption: 'RAW',
         requestBody: {
           values: [[
-            new Date().toLocaleString('ko-KR'), data.id, data.title, data.author, data.genre,
+            new Date().toLocaleString('ko-KR'), data.title, data.author, data.genre,
             data.verdict, data.score, data.ageAppropriate,
             (data.tags || []).join(', '),
             data.interestingElements, data.valueElements,
-            data.interestConnection, data.status || '후보'
+            data.interestConnection, data.status || '후보', data.id
           ]]
         },
       })
@@ -74,8 +74,8 @@ export default async function handler(req, res) {
       const sheetId = await getSheetIdByName(sheets, sheetName)
       const deleteRequests = []
       for (let i = values.length - 1; i >= 1; i--) {
-        const rowId = String(values[i][1] || '')
-        const rowTitle = String(values[i][2] || '')
+        const rowTitle = String(values[i][1] || '')
+        const rowId = String(values[i][12] || '')
         if ((data.id && rowId === String(data.id)) || (data.title && rowTitle === data.title)) {
           deleteRequests.push({ deleteDimension: { range: { sheetId, dimension: 'ROWS', startIndex: i, endIndex: i + 1 } } })
         }
@@ -93,12 +93,12 @@ export default async function handler(req, res) {
       })
       const values = rows.data.values || []
       for (let i = 1; i < values.length; i++) {
-        const rowId = String(values[i][1] || '')
-        const rowTitle = String(values[i][2] || '')
+        const rowTitle = String(values[i][1] || '')
+        const rowId = String(values[i][12] || '')
         if ((data.id && rowId === String(data.id)) || (data.title && rowTitle === data.title)) {
           await sheets.spreadsheets.values.update({
             spreadsheetId: SHEET_ID,
-            range: `${sheetName}!M${i + 1}`,
+            range: `${sheetName}!L${i + 1}`,
             valueInputOption: 'RAW',
             requestBody: { values: [[data.status]] },
           })
