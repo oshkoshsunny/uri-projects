@@ -65,7 +65,7 @@ export async function evaluateBookFromImage(base64Image, mimeType) {
   return JSON.parse(text)
 }
 
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbw_LzlXtHF1o4YY1NFzTJACqROseVKZltUfOSr4Ih4-Cwicnjk4fJbCyPQTdNJ7LLKR2A/exec'
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzpssilTwnYkYATQFGcKDqUlECkH4Yh6kfIsDP1WsVE0ivMaE91ZYOu3QcOhv1XrQWsHA/exec'
 
 export async function syncToSheets(type, data) {
   try {
