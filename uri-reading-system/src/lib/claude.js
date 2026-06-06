@@ -7,6 +7,7 @@ Uri filter criteria:
 - CAUTION: LGBTQ-centric narrative, mocking authority, parent-bashing, precocious sexual content, cynicism
 - PREFERRED: courage, sacrifice, growth, values compatible with Christian faith
 
+IMPORTANT: All text fields (except title, author, genre, tags) must be written in Korean.
 Always respond in valid JSON only, no markdown, no explanation outside JSON.`
 
 export async function evaluateBookFromImage(base64Image, mimeType) {
@@ -34,18 +35,18 @@ export async function evaluateBookFromImage(base64Image, mimeType) {
               type: 'text',
               text: `Analyze this book cover image and return a JSON object with these exact fields:
 {
-  "title": "book title",
-  "author": "author name",
-  "genre": "genre",
+  "title": "책 제목 (원제 그대로)",
+  "author": "저자명",
+  "genre": "장르 (한국어)",
   "ageAppropriate": "yes/caution/no",
-  "ageReason": "brief reason",
-  "cautionFlags": ["list of caution items or empty array"],
-  "interestingElements": "what would engage Uri",
-  "valueElements": "values present in the book",
-  "interestConnection": "how it connects to Uri's interests",
+  "ageReason": "연령 적합성 이유 (한국어, 1~2문장)",
+  "cautionFlags": ["주의 항목 한국어 배열, 없으면 빈 배열"],
+  "interestingElements": "유리가 흥미로울 요소 (한국어)",
+  "valueElements": "책에 담긴 가치관 요소 (한국어)",
+  "interestConnection": "유리의 관심사와의 연결점 (한국어)",
   "verdict": "제공/보류/제외",
-  "verdictReason": "brief reason for verdict",
-  "tags": ["tag1", "tag2", "tag3"]
+  "verdictReason": "판정 이유 (한국어, 1~2문장)",
+  "tags": ["영어태그1", "영어태그2", "영어태그3"]
 }`,
             },
           ],
