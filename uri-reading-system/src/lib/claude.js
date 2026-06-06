@@ -1,4 +1,4 @@
-const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY
+const API_KEY = (import.meta.env.VITE_ANTHROPIC_API_KEY || '').replace(/[^\x20-\x7E]/g, '').trim()
 
 const SYSTEM_PROMPT = `You are a children's book evaluator for a Korean parent filtering books for their child "Uri" (유리).
 Uri is a child who loves: cubing (very strong), taekwondo (strong), games/strategy (strong), Bible stories (observing), science (expanding).
