@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getBooks, updateBookStatus, calcScore } from '../lib/storage'
+import { syncToSheets } from '../lib/claude'
 
 function deleteBook(id) {
   const books = JSON.parse(localStorage.getItem('uri_books_db') || '[]')
@@ -30,12 +31,14 @@ export default function TabLibrary() {
 
   function changeStatus(id, status) {
     updateBookStatus(id, status)
+    syncToSheets('updateStatus', { id, status })
     refresh()
   }
 
   function handleDelete(id) {
     if (!window.confirm('이 책을 삭제할까요?')) return
     deleteBook(id)
+    syncToSheets('deleteBook', { id })
     setExpanded(null)
     refresh()
   }
