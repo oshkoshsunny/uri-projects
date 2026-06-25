@@ -1,6 +1,74 @@
 import { useState } from 'react'
-import { getBooks, updateBookStatus, updateBookQuestions, updateBookVocab, calcScore } from '../lib/storage'
+import { getBooks, updateBookStatus, updateBookQuestions, updateBookVocab, calcScore, saveReaction, getReactions } from '../lib/storage'
 import { syncToSheets, generateDiscussionQuestions, generateVocabCards } from '../lib/claude'
+
+const SPEEDS = ['매우 빠름', '빠름', '보통', '느림', '매우 느림']
+
+function ReactionForm({ book, onSaved }) {
+  const [form, setForm] = useState({ speed: '보통', immersion: 3, comprehension: 3, liked: '', disliked: '', wantSimilar: true, parentNote: '' })
+  const [saved, setSaved] = useState(false)
+
+  function set(key, val) { setForm(f => ({ ...f, [key]: val })) }
+
+  async function handleSave() {
+    const reaction = { bookId: book.id, bookTitle: book.title, ...form }
+    saveReaction(reaction)
+    await syncToSheets('reaction', reaction)
+    setSaved(true)
+    onSaved?.()
+  }
+
+  if (saved) return (
+    <div style={{ padding: '12px', background: '#f0fdf4', borderRadius: 8, color: '#166534', fontSize: '0.85rem', textAlign: 'center' }}>
+      ✅ 반응 저장됨
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div>
+        <div className="label">읽은 속도</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+          {SPEEDS.map(s => (
+            <button key={s} className={`filter-chip ${form.speed === s ? 'active' : ''}`} onClick={() => set('speed', s)}>{s}</button>
+          ))}
+        </div>
+      </div>
+      {[['immersion', '몰입도'], ['comprehension', '이해도']].map(([key, label]) => (
+        <div key={key}>
+          <div className="label">{label}</div>
+          <div style={{ display: 'flex', gap: 4, marginTop: 4, alignItems: 'center' }}>
+            {[1,2,3,4,5].map(n => (
+              <span key={n} onClick={() => set(key, n)} style={{ cursor: 'pointer', fontSize: '1.3rem', opacity: n <= form[key] ? 1 : 0.25 }}>⭐</span>
+            ))}
+            <span style={{ marginLeft: 6, fontSize: '0.8rem', color: '#718096' }}>{form[key]}/5</span>
+          </div>
+        </div>
+      ))}
+      <div>
+        <div className="label">좋아한 요소</div>
+        <textarea className="textarea" style={{ marginTop: 4 }} placeholder="어떤 부분이 재미있었나요?" value={form.liked} onChange={e => set('liked', e.target.value)} />
+      </div>
+      <div>
+        <div className="label">싫어한 요소</div>
+        <textarea className="textarea" style={{ marginTop: 4 }} placeholder="불편하거나 지루했던 부분" value={form.disliked} onChange={e => set('disliked', e.target.value)} />
+      </div>
+      <div>
+        <div className="label">비슷한 책 또 원함?</div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+          {[[true, '✅ 네'], [false, '❌ 아니요']].map(([v, label]) => (
+            <button key={String(v)} className={`filter-chip ${form.wantSimilar === v ? 'active' : ''}`} onClick={() => set('wantSimilar', v)}>{label}</button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div className="label">부모 관찰 메모</div>
+        <textarea className="textarea" style={{ marginTop: 4 }} placeholder="행동 변화, 질문, 감정 반응 등" value={form.parentNote} onChange={e => set('parentNote', e.target.value)} />
+      </div>
+      <button className="btn-primary" onClick={handleSave}>💾 반응 저장</button>
+    </div>
+  )
+}
 
 function deleteBook(id) {
   const books = JSON.parse(localStorage.getItem('uri_books_db') || '[]')
@@ -37,6 +105,7 @@ export default function TabLibrary() {
   const [expanded, setExpanded] = useState(null)
   const [generatingQuestions, setGeneratingQuestions] = useState(null)
   const [expandedQuestion, setExpandedQuestion] = useState(null)
+  const [showReactionForm, setShowReactionForm] = useState(null)
 
   function refresh() { setBooks(getBooks()) }
 
@@ -263,6 +332,25 @@ export default function TabLibrary() {
                       ))}
                     </div>
                   </>
+                )}
+
+                {/* 유리 반응 */}
+                <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '14px 0' }} />
+                {showReactionForm === book.id ? (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <strong style={{ fontSize: '0.9rem' }}>💬 유리 반응 기록</strong>
+                      <button onClick={() => setShowReactionForm(null)} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+                    </div>
+                    <ReactionForm book={book} onSaved={() => setShowReactionForm(null)} />
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setShowReactionForm(book.id)}
+                    style={{ width: '100%', padding: '10px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
+                  >
+                    💬 유리 반응 추가
+                  </button>
                 )}
 
                 {/* 상태 변경 */}
