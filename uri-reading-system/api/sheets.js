@@ -12,7 +12,19 @@ async function getSheets() {
   return google.sheets({ version: 'v4', auth })
 }
 
+async function ensureSheet(sheets, sheetName) {
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID })
+  const exists = meta.data.sheets.some(s => s.properties.title === sheetName)
+  if (!exists) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SHEET_ID,
+      requestBody: { requests: [{ addSheet: { properties: { title: sheetName } } }] },
+    })
+  }
+}
+
 async function ensureHeader(sheets, sheetName, headers) {
+  await ensureSheet(sheets, sheetName)
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
     range: `${sheetName}!A1:Z1`,
