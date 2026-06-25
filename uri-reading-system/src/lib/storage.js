@@ -46,6 +46,27 @@ export function saveReaction(reaction) {
   return reactions
 }
 
+export function updateBookQuestions(id, questions) {
+  const books = getBooks()
+  const idx = books.findIndex(b => b.id === id)
+  if (idx >= 0) {
+    books[idx].questions = questions
+    books[idx].questionsGeneratedAt = Date.now()
+    localStorage.setItem(BOOKS_KEY, JSON.stringify(books))
+  }
+  return books
+}
+
+export function updateBookVocab(id, vocab) {
+  const books = getBooks()
+  const idx = books.findIndex(b => b.id === id)
+  if (idx >= 0) {
+    books[idx].vocab = vocab
+    localStorage.setItem(BOOKS_KEY, JSON.stringify(books))
+  }
+  return books
+}
+
 export function calcScore(eval_data) {
   if (eval_data.verdict === '제외') return -99
   let score = 0

@@ -15,17 +15,28 @@ export default function TabBookEval() {
 
   function handleFile(file) {
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const dataUrl = e.target.result
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const MAX = 800
+      let w = img.width, h = img.height
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX }
+        else { w = Math.round(w * MAX / h); h = MAX }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.75)
+      URL.revokeObjectURL(url)
       setImagePreview(dataUrl)
       const base64 = dataUrl.split(',')[1]
-      setImageData({ base64, mimeType: file.type })
+      setImageData({ base64, mimeType: 'image/jpeg' })
       setResult(null)
       setSaved(false)
       setError(null)
     }
-    reader.readAsDataURL(file)
+    img.src = url
   }
 
   async function handleEvaluate() {
@@ -53,6 +64,7 @@ export default function TabBookEval() {
       ageAppropriate: ageMap[result.ageAppropriate] || result.ageAppropriate,
       score: calcScore(result),
       status: '후보',
+      coverImage: imagePreview,
     }
     saveBook(book)
     await syncToSheets('book', book)

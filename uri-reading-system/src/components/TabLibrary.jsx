@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { getBooks, updateBookStatus, calcScore } from '../lib/storage'
-import { syncToSheets } from '../lib/claude'
+import { getBooks, updateBookStatus, updateBookQuestions, updateBookVocab, calcScore } from '../lib/storage'
+import { syncToSheets, generateDiscussionQuestions, generateVocabCards } from '../lib/claude'
 
 function deleteBook(id) {
   const books = JSON.parse(localStorage.getItem('uri_books_db') || '[]')
@@ -22,17 +22,49 @@ function scoreClass(score) {
   return 'score-low'
 }
 
+const QUESTION_TYPE_COLORS = {
+  '인물': '#4A9EFF',
+  '줄거리(why)': '#9B59B6',
+  '어휘': '#E67E22',
+  '적용': '#00C896',
+  '감정·생각': '#E91E63',
+  '비판적의견': '#FF4757',
+}
+
 export default function TabLibrary() {
   const [filter, setFilter] = useState('전체')
   const [books, setBooks] = useState(getBooks)
   const [expanded, setExpanded] = useState(null)
+  const [generatingQuestions, setGeneratingQuestions] = useState(null)
+  const [expandedQuestion, setExpandedQuestion] = useState(null)
 
   function refresh() { setBooks(getBooks()) }
 
-  function changeStatus(id, status) {
+  async function changeStatus(id, status) {
     updateBookStatus(id, status)
     syncToSheets('updateStatus', { id, status })
     refresh()
+
+    if (status === '선택됨') {
+      const currentBooks = getBooks()
+      const book = currentBooks.find(b => b.id === id)
+      if (book && !book.questions) {
+        setGeneratingQuestions(id)
+        try {
+          const [questions, vocab] = await Promise.all([
+            generateDiscussionQuestions(book),
+            generateVocabCards(book),
+          ])
+          updateBookQuestions(id, questions)
+          updateBookVocab(id, vocab)
+        } catch (e) {
+          console.error('질문 생성 실패:', e)
+        } finally {
+          setGeneratingQuestions(null)
+          refresh()
+        }
+      }
+    }
   }
 
   function handleDelete(id) {
@@ -76,13 +108,29 @@ export default function TabLibrary() {
             <div
               className="book-card"
               onClick={() => setExpanded(expanded === book.id ? null : book.id)}
+              style={{ alignItems: 'stretch', padding: 0, overflow: 'hidden' }}
             >
-              <div
-                className={`score-circle ${scoreClass(book.score)}`}
-              >
-                {book.score > 0 ? `+${book.score}` : book.score}
+              {/* 썸네일 영역 */}
+              <div style={{ width: 64, flexShrink: 0, position: 'relative', background: '#1e1e2e' }}>
+                {book.coverImage ? (
+                  <img
+                    src={book.coverImage}
+                    alt={book.title}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>📚</div>
+                )}
+                {/* 점수 배지 - 우상단 오버레이 */}
+                <div
+                  className={`score-circle ${scoreClass(book.score)}`}
+                  style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, fontSize: '0.65rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}
+                >
+                  {book.score > 0 ? `+${book.score}` : book.score}
+                </div>
               </div>
-              <div className="book-info">
+
+              <div className="book-info" style={{ padding: '12px 12px', flex: 1, minWidth: 0 }}>
                 <div className="book-title">{book.title}</div>
                 <div className="book-author">{book.author} · {book.genre}</div>
                 <div className="book-tags">
@@ -92,6 +140,8 @@ export default function TabLibrary() {
                   <span className={`badge ${book.verdict === '제공' ? 'badge-green' : book.verdict === '보류' ? 'badge-yellow' : 'badge-red'}`}>
                     {book.verdict}
                   </span>
+                  {book.questions && <span className="badge badge-blue">💬 질문 있음</span>}
+                  {generatingQuestions === book.id && <span className="badge badge-gray">⟳ 생성 중...</span>}
                   {book.tags?.slice(0, 2).map((t, i) => (
                     <span key={i} className="badge badge-purple">{t}</span>
                   ))}
@@ -101,6 +151,7 @@ export default function TabLibrary() {
 
             {expanded === book.id && (
               <div className="card" style={{ marginTop: -8, marginBottom: 16, borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
+                {/* 평가 결과 */}
                 <div className="result-row">
                   <span className="result-key">흥미 요소</span>
                   <span className="result-val">{book.interestingElements}</span>
@@ -123,7 +174,100 @@ export default function TabLibrary() {
                     </span>
                   </div>
                 )}
-                <div style={{ marginTop: 12 }}>
+
+                {/* 질문 섹션 */}
+                {(book.questions || generatingQuestions === book.id) && (
+                  <>
+                    <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '14px 0' }} />
+                    <div style={{ marginBottom: 8 }}>
+                      <strong style={{ fontSize: '0.9rem' }}>💬 유리와 대화해보세요</strong>
+                      <span style={{ fontSize: '0.75rem', color: '#718096', marginLeft: 8 }}>({book.questions?.length || 0}문항)</span>
+                    </div>
+
+                    {generatingQuestions === book.id ? (
+                      <div style={{ padding: '16px', textAlign: 'center', color: '#718096', fontSize: '0.85rem' }}>
+                        <span className="spinner" /> 질문 생성 중...
+                      </div>
+                    ) : (
+                      book.questions?.map((q) => (
+                        <div
+                          key={q.order}
+                          style={{
+                            marginBottom: 8,
+                            border: '1px solid #e2e8f0',
+                            borderRadius: 10,
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              padding: '10px 12px',
+                              cursor: 'pointer',
+                              gap: 10,
+                            }}
+                            onClick={() => setExpandedQuestion(expandedQuestion === `${book.id}-${q.order}` ? null : `${book.id}-${q.order}`)}
+                          >
+                            <span style={{
+                              flexShrink: 0,
+                              fontSize: '0.65rem',
+                              fontWeight: 700,
+                              padding: '2px 7px',
+                              borderRadius: 12,
+                              background: `${QUESTION_TYPE_COLORS[q.type]}22`,
+                              color: QUESTION_TYPE_COLORS[q.type] || '#666',
+                              whiteSpace: 'nowrap',
+                              marginTop: 1,
+                            }}>
+                              {q.type}
+                            </span>
+                            <span style={{ fontSize: '0.9rem', flex: 1, lineHeight: 1.4 }}>{q.question}</span>
+                            <span style={{ color: '#aaa', fontSize: '0.8rem', flexShrink: 0 }}>
+                              {expandedQuestion === `${book.id}-${q.order}` ? '▲' : '▼'}
+                            </span>
+                          </div>
+                          {expandedQuestion === `${book.id}-${q.order}` && (
+                            <div style={{ padding: '0 12px 12px', borderTop: '1px solid #f0f0f0' }}>
+                              {q.targetVocab && (
+                                <div style={{ marginTop: 8, padding: '6px 10px', background: '#fff8e1', borderRadius: 6, fontSize: '0.82rem', color: '#7b5e00' }}>
+                                  확인 단어: <strong>{q.targetVocab}</strong>
+                                </div>
+                              )}
+                              <div style={{ marginTop: 8, padding: '8px 10px', background: '#f8f9fa', borderRadius: 6, fontSize: '0.82rem', color: '#555' }}>
+                                👨‍👩‍👧 {q.parentGuide}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </>
+                )}
+
+                {/* 어휘 카드 섹션 */}
+                {book.vocab?.length > 0 && (
+                  <>
+                    <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '14px 0' }} />
+                    <div style={{ marginBottom: 8 }}>
+                      <strong style={{ fontSize: '0.9rem' }}>📝 영어 어휘 카드</strong>
+                      <span style={{ fontSize: '0.72rem', color: '#aaa', marginLeft: 8 }}>추정 단어 (본문 미확인)</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {book.vocab.map((v, i) => (
+                        <div key={i} style={{ padding: '10px 12px', background: '#f0faf7', borderRadius: 8, fontSize: '0.85rem' }}>
+                          <div style={{ fontWeight: 700, color: '#2d6a4f' }}>{v.word}</div>
+                          <div style={{ color: '#555', marginTop: 2 }}>{v.meaning}</div>
+                          <div style={{ color: '#888', fontSize: '0.78rem', marginTop: 3, fontStyle: 'italic' }}>{v.example}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* 상태 변경 */}
+                <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '14px 0' }} />
+                <div style={{ marginTop: 0 }}>
                   <label className="label">상태 변경</label>
                   <div className="filter-row" style={{ marginBottom: 0 }}>
                     {['후보', '선택됨', '읽음', '중단'].map(s => (
