@@ -1,165 +1,51 @@
 import { useState } from 'react'
-import { getBooks } from '../lib/storage'
-import { saveReaction } from '../lib/storage'
-import { syncToSheets } from '../lib/claude'
-
-const SPEEDS = ['매우 빠름', '빠름', '보통', '느림', '매우 느림']
-
-function StarRating({ value, onChange, label }) {
-  return (
-    <div className="form-group">
-      <label className="label">{label}</label>
-      <div className="star-row">
-        {[1, 2, 3, 4, 5].map(n => (
-          <span
-            key={n}
-            className="star"
-            onClick={() => onChange(n)}
-            style={{ opacity: n <= value ? 1 : 0.25 }}
-          >
-            ⭐
-          </span>
-        ))}
-        <span style={{ marginLeft: 8, fontSize: '0.85rem', color: '#718096' }}>{value}/5</span>
-      </div>
-    </div>
-  )
-}
+import { getReactions } from '../lib/storage'
 
 export default function TabReaction() {
-  const books = getBooks().filter(b => b.status !== '제외')
-  const [selectedBook, setSelectedBook] = useState('')
-  const [form, setForm] = useState({
-    speed: '보통',
-    immersion: 3,
-    comprehension: 3,
-    liked: '',
-    disliked: '',
-    wantSimilar: true,
-    parentNote: '',
-  })
-  const [saved, setSaved] = useState(false)
+  const [reactions] = useState(getReactions)
 
-  function set(key, val) {
-    setForm(f => ({ ...f, [key]: val }))
-    setSaved(false)
-  }
-
-  async function handleSave() {
-    if (!selectedBook) return
-    const book = books.find(b => b.id === selectedBook)
-    const reaction = {
-      bookId: selectedBook,
-      bookTitle: book?.title || '',
-      ...form,
-    }
-    saveReaction(reaction)
-    await syncToSheets('reaction', reaction)
-    setSaved(true)
+  if (reactions.length === 0) {
+    return (
+      <div className="empty-state">
+        <div className="icon">💬</div>
+        <div>아직 기록된 반응이 없어요.</div>
+        <div style={{ fontSize: '0.82rem', color: '#aaa', marginTop: 6 }}>라이브러리에서 책 카드를 열고 "유리 반응 추가"를 눌러주세요.</div>
+      </div>
+    )
   }
 
   return (
     <div>
-      <div className="card">
-        <h2>📖 책 선택</h2>
-        {books.length === 0 ? (
-          <div className="empty-state">
-            <div className="icon">📭</div>
-            <div>먼저 탭 1에서 책을 평가하고 저장하세요</div>
-          </div>
-        ) : (
-          <div className="form-group">
-            <label className="label">읽은 책</label>
-            <select
-              className="select"
-              value={selectedBook}
-              onChange={e => { setSelectedBook(e.target.value); setSaved(false) }}
-            >
-              <option value="">-- 책 선택 --</option>
-              {books.map(b => (
-                <option key={b.id} value={b.id}>{b.title} ({b.author})</option>
-              ))}
-            </select>
-          </div>
-        )}
+      <div className="card" style={{ paddingBottom: 8 }}>
+        <h2>💬 유리 반응 기록 ({reactions.length}건)</h2>
       </div>
-
-      {selectedBook && (
-        <div className="card">
-          <h2>💬 반응 기록</h2>
-
-          <div className="form-group">
-            <label className="label">읽은 속도</label>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {SPEEDS.map(s => (
-                <button
-                  key={s}
-                  className={`filter-chip ${form.speed === s ? 'active' : ''}`}
-                  onClick={() => set('speed', s)}
-                >
-                  {s}
-                </button>
-              ))}
+      {reactions.map((r, i) => (
+        <div key={i} className="card" style={{ marginBottom: 12 }}>
+          <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: 4 }}>{r.bookTitle}</div>
+          <div style={{ fontSize: '0.75rem', color: '#aaa', marginBottom: 10 }}>{new Date(r.createdAt).toLocaleString('ko-KR')}</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+            <span className="badge badge-gray">속도: {r.speed}</span>
+            <span className="badge badge-blue">몰입 {'⭐'.repeat(r.immersion)}</span>
+            <span className="badge badge-green">이해 {'⭐'.repeat(r.comprehension)}</span>
+            <span className={`badge ${r.wantSimilar ? 'badge-green' : 'badge-red'}`}>{r.wantSimilar ? '비슷한 책 원함' : '비슷한 책 필요없음'}</span>
+          </div>
+          {r.liked && (
+            <div style={{ fontSize: '0.85rem', marginBottom: 6 }}>
+              <span style={{ color: '#718096' }}>좋아한 요소: </span>{r.liked}
             </div>
-          </div>
-
-          <StarRating value={form.immersion} onChange={v => set('immersion', v)} label="몰입도" />
-          <StarRating value={form.comprehension} onChange={v => set('comprehension', v)} label="이해도" />
-
-          <div className="form-group">
-            <label className="label">좋아한 요소</label>
-            <textarea
-              className="textarea"
-              placeholder="어떤 부분이 재미있었나요?"
-              value={form.liked}
-              onChange={e => set('liked', e.target.value)}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="label">싫어한 요소</label>
-            <textarea
-              className="textarea"
-              placeholder="불편하거나 지루했던 부분"
-              value={form.disliked}
-              onChange={e => set('disliked', e.target.value)}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="label">비슷한 책 또 원함?</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {[true, false].map(v => (
-                <button
-                  key={String(v)}
-                  className={`filter-chip ${form.wantSimilar === v ? 'active' : ''}`}
-                  onClick={() => set('wantSimilar', v)}
-                >
-                  {v ? '✅ 네, 더 원해요' : '❌ 아니요'}
-                </button>
-              ))}
+          )}
+          {r.disliked && (
+            <div style={{ fontSize: '0.85rem', marginBottom: 6 }}>
+              <span style={{ color: '#718096' }}>싫어한 요소: </span>{r.disliked}
             </div>
-          </div>
-
-          <div className="form-group">
-            <label className="label">부모 관찰 메모</label>
-            <textarea
-              className="textarea"
-              placeholder="부모가 관찰한 내용 (행동 변화, 질문, 감정 반응 등)"
-              value={form.parentNote}
-              onChange={e => set('parentNote', e.target.value)}
-            />
-          </div>
-
-          <button
-            className="btn-primary"
-            disabled={saved}
-            onClick={handleSave}
-          >
-            {saved ? '✅ 반응 저장됨' : '💾 반응 기록 저장'}
-          </button>
+          )}
+          {r.parentNote && (
+            <div style={{ fontSize: '0.85rem', padding: '8px 10px', background: '#f8f9fa', borderRadius: 6, color: '#555' }}>
+              👨‍👩‍👧 {r.parentNote}
+            </div>
+          )}
         </div>
-      )}
+      ))}
     </div>
   )
 }
