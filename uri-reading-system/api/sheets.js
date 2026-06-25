@@ -107,7 +107,7 @@ export default async function handler(req, res) {
     }
 
     if (type === 'reaction') {
-      const sheetName = 'Reactions'
+      const sheetName = '유리반응'
       await ensureHeader(sheets, sheetName, ['날짜','책제목','읽은속도','몰입도','이해도','좋아한요소','싫어한요소','비슷한책원함','부모메모'])
       await sheets.spreadsheets.values.append({
         spreadsheetId: SHEET_ID,
@@ -122,6 +122,36 @@ export default async function handler(req, res) {
             data.parentNote
           ]]
         },
+      })
+    }
+
+    if (type === 'questions') {
+      const sheetName = '유리와대화해보세요'
+      await ensureHeader(sheets, sheetName, ['날짜','책제목','순서','타입','질문','부모가이드','확인단어'])
+      const rows = (data.questions || []).map(q => [
+        new Date().toLocaleString('ko-KR'), data.bookTitle,
+        q.order, q.type, q.question, q.parentGuide, q.targetVocab || ''
+      ])
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SHEET_ID,
+        range: `${sheetName}!A1`,
+        valueInputOption: 'RAW',
+        requestBody: { values: rows },
+      })
+    }
+
+    if (type === 'vocab') {
+      const sheetName = '영어어휘카드'
+      await ensureHeader(sheets, sheetName, ['날짜','책제목','단어','뜻','예문'])
+      const rows = (data.vocab || []).map(v => [
+        new Date().toLocaleString('ko-KR'), data.bookTitle,
+        v.word, v.meaning, v.example
+      ])
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SHEET_ID,
+        range: `${sheetName}!A1`,
+        valueInputOption: 'RAW',
+        requestBody: { values: rows },
       })
     }
 

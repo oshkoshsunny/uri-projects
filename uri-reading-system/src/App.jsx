@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import TabBookEval from './components/TabBookEval'
-import TabReaction from './components/TabReaction'
 import TabLibrary from './components/TabLibrary'
 import './App.css'
 
@@ -9,7 +8,6 @@ export default function App() {
 
   const tabs = [
     { label: '📚 책 평가', component: <TabBookEval /> },
-    { label: '💬 유리 반응', component: <TabReaction /> },
     { label: '🗂️ 라이브러리', component: <TabLibrary /> },
   ]
 

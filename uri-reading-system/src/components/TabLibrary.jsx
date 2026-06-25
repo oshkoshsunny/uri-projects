@@ -126,6 +126,8 @@ export default function TabLibrary() {
           ])
           updateBookQuestions(id, questions)
           updateBookVocab(id, vocab)
+          syncToSheets('questions', { bookTitle: book.title, questions })
+          syncToSheets('vocab', { bookTitle: book.title, vocab })
         } catch (e) {
           console.error('질문 생성 실패:', e)
         } finally {
